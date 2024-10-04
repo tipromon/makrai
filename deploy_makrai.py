@@ -15,6 +15,20 @@ search_key = st.secrets["AZURE_SEARCH_SERVICE_ADMIN_KEY"]
 storage_account = st.secrets["AZURE_STORAGE_ACCOUNT"]
 storage_container = st.secrets["AZURE_STORAGE_CONTAINER"]
 
+# Carregar as credenciais do arquivo hashed_pw.pkl
+file_path = Path(__file__).parent / "hashed_pw.pkl"
+with file_path.open("rb") as file:
+    credentials = pickle.load(file)
+
+# Criar o objeto de autenticação usando as credenciais carregadas
+authenticator = stauth.Authenticate(
+    credentials=credentials,
+    cookie_name="promon_ai_chatbot",
+    cookie_key="some_cookie_key",
+    cookie_expiry_days=30
+)
+
+
 # Instruções detalhadas para o assistente da Promon Engenharia
 ROLE_INFORMATION = """
 Instruções para o Assistente de IA da Promon Engenharia:
@@ -63,48 +77,9 @@ Mantenha clareza, objetividade e relevância em todas as respostas. Garanta que 
 names = ["Peter Parker", "Rebecca Miller", "Michel Daros", "Gustavo Pelissaro", "Alex Sandoval", "Alexsandra Mendes", "Marco Lamim", "Guilherme Grandesi", "Henrique Riego", "Rogerio Ishikawa", "David Andrade", "Fabiana Garcia", "Gabriela Souza", "Andre Hiroshi", "Rafael Pereira", "Gisele Duarte", "Bruna Rufino", "Hellen Vitali", "Rosana Bretzel", "Maria Araújo"]
 usernames = ["pparker", "rmiller", "mdaros", "gpelissaro", "asandoval", "amendes", "mlamim", "ggrandesi", "hriego", "rishikawa", "dandrade", "fgarcia", "gsouza", "ahiroshi", "rpereira", "gduarte", "brufino", "hvitali", "rbretzel", "maraujo"]
 
-# Carregar as senhas hasheadas com emails
-file_path = Path(__file__).parent / "hashed_pw.pkl"
-with file_path.open("rb") as file:
-    credentials = pickle.load(file)
 
 # Verificar se as credenciais têm o formato correto
 st.write(credentials)  # Isso pode ser removido depois de verificar as credenciais
-
-
-# Configurar as credenciais de autenticação
-credentials = {
-    "usernames": {
-        usernames[0]: {"name": names[0], "password": hashed_passwords[0]},
-        usernames[1]: {"name": names[1], "password": hashed_passwords[1]},
-        usernames[2]: {"name": names[2], "password": hashed_passwords[2]},
-        usernames[3]: {"name": names[3], "password": hashed_passwords[3]},
-        usernames[4]: {"name": names[4], "password": hashed_passwords[4]},
-        usernames[5]: {"name": names[5], "password": hashed_passwords[5]},
-        usernames[6]: {"name": names[6], "password": hashed_passwords[6]},
-        usernames[7]: {"name": names[7], "password": hashed_passwords[7]},
-        usernames[8]: {"name": names[8], "password": hashed_passwords[8]},
-        usernames[9]: {"name": names[9], "password": hashed_passwords[9]},
-        usernames[10]: {"name": names[10], "password": hashed_passwords[10]},
-        usernames[11]: {"name": names[11], "password": hashed_passwords[11]},
-        usernames[12]: {"name": names[12], "password": hashed_passwords[12]},
-        usernames[13]: {"name": names[13], "password": hashed_passwords[13]},
-        usernames[14]: {"name": names[14], "password": hashed_passwords[14]},
-        usernames[15]: {"name": names[15], "password": hashed_passwords[15]},
-        usernames[16]: {"name": names[16], "password": hashed_passwords[16]},
-        usernames[17]: {"name": names[17], "password": hashed_passwords[17]},
-        usernames[18]: {"name": names[18], "password": hashed_passwords[18]},
-        usernames[19]: {"name": names[19], "password": hashed_passwords[19]}        
-    }
-}
-
-# Criar o objeto de autenticação
-authenticator = stauth.Authenticate(
-    credentials=credentials,
-    cookie_name="promon_ai_chatbot",
-    cookie_key="some_cookie_key",
-    cookie_expiry_days=30
-)
 
 
 # Função para carregar índices do Azure AI Search
