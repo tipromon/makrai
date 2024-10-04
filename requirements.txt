@@ -6,6 +6,4 @@ azure-storage-blob==12.14.1
 openai
 streamlit
 python-dotenv
-streamlit_authenticator
-pickle
-pathlib
+streamlit_authenticator==0.4.1
