@@ -1,10 +1,12 @@
-import pickle
-from pathlib import Path
+import yaml
+from yaml.loader import SafeLoader
 import streamlit as st
 import streamlit_authenticator as stauth
 import openai
 from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
+from pathlib import Path
 
 # Carregar as variáveis diretamente do Streamlit Secrets
 aoai_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
@@ -14,6 +16,22 @@ search_endpoint = st.secrets["AZURE_SEARCH_SERVICE_ENDPOINT"]
 search_key = st.secrets["AZURE_SEARCH_SERVICE_ADMIN_KEY"]
 storage_account = st.secrets["AZURE_STORAGE_ACCOUNT"]
 storage_container = st.secrets["AZURE_STORAGE_CONTAINER"]
+
+# Carregar as credenciais do arquivo YAML
+with open("config.yaml", "r") as file:
+    config = yaml.load(file, Loader=SafeLoader)
+
+# Pre-hash as senhas (opcional, para melhorar performance)
+hashed_credentials = stauth.Hasher(config['credentials']['usernames']).generate()
+
+# Criar o objeto de autenticação usando as credenciais carregadas
+authenticator = stauth.Authenticate(
+    credentials=hashed_credentials,
+    cookie_name=config['cookie']['name'],
+    key=config['cookie']['key'],
+    expiry_days=config['cookie']['expiry_days'],
+    auto_hash=False  # Se já pré-hasheamos as senhas
+)
 
 # Instruções detalhadas para o assistente da Promon Engenharia
 ROLE_INFORMATION = """
@@ -57,19 +75,6 @@ Considerações Finais:
 Mantenha clareza, objetividade e relevância em todas as respostas. Garanta que o usuário receba as informações mais atualizadas e pertinentes, baseadas exclusivamente nos documentos disponíveis para consulta. Seu objetivo é facilitar o acesso a informações técnicas e administrativas, respeitando sempre os limites de acesso aos conteúdos indexados da Promon Engenharia.
 """
 
-# --- USER AUTHENTICATION ---
-# Carregar as credenciais do arquivo hashed_pw.pkl
-file_path = Path(__file__).parent / "hashed_pw.pkl"
-with file_path.open("rb") as file:
-    credentials = pickle.load(file)
-
-# Criar o objeto de autenticação usando as credenciais carregadas
-authenticator = stauth.Authenticate(
-    credentials=credentials,
-    cookie_name="promon_ai_chatbot",
-    cookie_key="some_cookie_key",
-    cookie_expiry_days=30
-)
 
 # Função para carregar índices do Azure AI Search
 def get_available_indexes(search_endpoint, search_key):
@@ -88,7 +93,7 @@ index_name_mapping = {
 def get_friendly_index_name(real_index_name):
     return index_name_mapping.get(real_index_name, real_index_name)
 
-# Função para criar o chat com dados do Azure AI Search e ROLE_INFORMATION
+# Função para criar o chat com dados do Azure AI Search
 def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     client = openai.AzureOpenAI(
         api_key=aoai_key,
@@ -136,13 +141,11 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
 
         # Realizar a busca no Azure AI Search
         search_client = SearchClient(search_endpoint, selected_index, credential=AzureKeyCredential(search_key))
-        logger.debug(f"Realizando busca no índice: {selected_index}")
         results = search_client.search(prompt, top=5)
 
         # Processar os documentos retornados da busca
         for result in results:
             doc_name = result.get('sourcefile', 'Documento sem nome')
-            logger.debug(f"Documento encontrado: {doc_name}")
             documents_used.append({
                 'content': result.get('content', ''),
                 'sourcefile': doc_name
@@ -158,15 +161,8 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
         if documents_used:
             full_response += "\n\nReferências:\n"
             for i, doc in enumerate(documents_used):
-                doc_name = os.path.basename(doc['sourcefile'])
-                
-                # Usar o container selecionado pelo usuário
-                selected_container = selected_index  # Assumindo que o nome do índice corresponde ao container
-                
-                doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_container}/{urllib.parse.quote(doc_name)}"
-                logger.debug(f"URL do documento gerada: {doc_url}")
-
-                # Criar link clicável
+                doc_name = doc['sourcefile']
+                doc_url = f"https://{storage_account}.blob.core.windows.net/{storage_container}/{doc_name}"
                 full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
 
         # Atualiza a resposta final no placeholder
@@ -174,17 +170,13 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-    # Log final para depuração
-    logger.debug(f"Resposta completa gerada com {len(documents_used)} documentos referenciados.")
-
-# Função principal do Streamlit
 # Função principal do Streamlit
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
 
     # Autenticação na barra lateral
     with st.sidebar:
-        name, authentication_status, username = authenticator.login("sidebar")  # Corrigido para usar apenas "sidebar"
+        name, authentication_status, username = authenticator.login("sidebar")
 
     # Verificar o status da autenticação
     if authentication_status == False:
@@ -233,4 +225,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
