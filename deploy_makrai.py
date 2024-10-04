@@ -160,61 +160,75 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Exibir a resposta do chatbot
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
         documents_used = []
 
+        # Realizar a busca no Azure AI Search
+        search_client = SearchClient(search_endpoint, selected_index, credential=AzureKeyCredential(search_key))
+        logger.debug(f"Realizando busca no índice: {selected_index}")
+        results = search_client.search(prompt, top=5)
+
+        # Processar os documentos retornados da busca
+        for result in results:
+            doc_name = result.get('sourcefile', 'Documento sem nome')
+            logger.debug(f"Documento encontrado: {doc_name}")
+            documents_used.append({
+                'content': result.get('content', ''),
+                'sourcefile': doc_name
+            })
+
+        # Processar a resposta do Azure OpenAI com integração ao Azure AI Search
         for response in create_chat_with_data_completion(aoai_deployment_name, st.session_state.messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
             if response.choices:
                 full_response += (response.choices[0].delta.content or "")
-                if hasattr(response.choices[0], 'data') and "documents" in response.choices[0].data:
-                    documents_used = response.choices[0].data["documents"]
                 message_placeholder.markdown(full_response + "▌")
 
-        # Gerar links clicáveis para os documentos utilizados, caso existam
+        # Adicionar referências clicáveis ao final da resposta
         if documents_used:
-            full_response += "\n\n**Documentos Referenciados:**\n"
+            full_response += "\n\nReferências:\n"
             for i, doc in enumerate(documents_used):
-                doc_url = f"https://{storage_account}.blob.core.windows.net/{storage_container}/{doc['document_id']}"
-                full_response += f"[{i+1}]({doc_url})\n"
+                doc_name = os.path.basename(doc['sourcefile'])
+                
+                # Usar o container selecionado pelo usuário
+                selected_container = selected_index  # Assumindo que o nome do índice corresponde ao container
+                
+                doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_container}/{urllib.parse.quote(doc_name)}"
+                logger.debug(f"URL do documento gerada: {doc_url}")
 
-        message_placeholder.markdown(full_response)
+                # Criar link clicável
+                full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
+
+        # Atualiza a resposta final no placeholder
+        message_placeholder.markdown(full_response, unsafe_allow_html=True)
     
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-# Função principal do Streamlit
+    # Log final para depuração
+    logger.debug(f"Resposta completa gerada com {len(documents_used)} documentos referenciados.")
 
+# Função principal do Streamlit
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
 
-    # Inicializar o histórico de mensagens se ainda não foi feito
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
     # Autenticação na barra lateral
-    try:
-        name, authentication_status, username = authenticator.login("Login", "sidebar")
-    except Exception as e:
-        st.error(f"Erro durante o login: {str(e)}")
-        return
+    with st.sidebar:
+        name, authentication_status, username = authenticator.login("main")  # Corrigido
 
     # Verificar o status da autenticação
-    if authentication_status is False:
+    if authentication_status == False:
         st.error("Nome de usuário ou senha incorretos")
-    elif authentication_status is None:
+
+    if authentication_status == None:
         st.warning("Por favor, insira o nome de usuário e a senha")
-    else:
+
+    if authentication_status:
         # --- SE O USUÁRIO ESTIVER AUTENTICADO ---
-        st.success(f"Bem-vindo, {name}, ao MakrAI!")
+        st.title(f"Bem-vindo, {name}, ao MakrAI!")
 
         # Carregar índices disponíveis do Azure AI Search
         available_indexes = get_available_indexes(search_endpoint, search_key)
-
-        if not available_indexes:
-            st.error("Nenhum índice disponível no Azure Search.")
-            return
 
         # Criar uma lista de nomes amigáveis a serem exibidos no dropdown
         friendly_indexes = [get_friendly_index_name(index) for index in available_indexes]
@@ -225,11 +239,14 @@ def main():
         # Encontrar o nome real do índice selecionado com base no nome amigável
         selected_index = next((key for key, value in index_name_mapping.items() if value == selected_friendly_index), selected_friendly_index)
 
+        # Inicializar o histórico de mensagens
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
         # Exibir o histórico de mensagens
-        if st.session_state.messages:
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
         # Caixa de entrada do chat
         if prompt := st.chat_input("Digite sua pergunta:"):
@@ -243,3 +260,6 @@ def main():
 
         # Botão de logout
         authenticator.logout("Logout", "sidebar")
+
+if __name__ == "__main__":
+    main()
