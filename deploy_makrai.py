@@ -191,8 +191,8 @@ def main():
     st.title("MakrAI - Assistente Virtual Promon")
 
     # Autenticação na barra lateral
-    with st.sidebar:
-        name, authentication_status, username = authenticator.login("Login", "sidebar")
+    with st.main:
+        name, authentication_status, username = authenticator.login("Login", "main")
 
     # Verificar o status da autenticação
     if authentication_status == False:
