@@ -235,7 +235,7 @@ def main():
         """)
 
         # Botão de logout
-        authenticator.logout("Logout", "sidebar")
+        authenticator.logout("Logout", "main")
 
 if __name__ == "__main__":
     main()
