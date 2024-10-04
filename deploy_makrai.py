@@ -190,18 +190,20 @@ def main():
     st.title("MakrAI - Assistente Virtual Promon")
 
     # Autenticação na barra lateral
-    name, authentication_status, username = authenticator.login("Login", "main")  # Altere para "sidebar" ou "main"
+    try:
+        name, authentication_status, username = authenticator.login("Login", "sidebar")
+    except Exception as e:
+        st.error(f"Erro durante o login: {str(e)}")
+        return
 
     # Verificar o status da autenticação
-    if authentication_status == False:
+    if authentication_status is False:
         st.error("Nome de usuário ou senha incorretos")
-
-    if authentication_status == None:
+    elif authentication_status is None:
         st.warning("Por favor, insira o nome de usuário e a senha")
-
-    if authentication_status:
+    else:
         # --- SE O USUÁRIO ESTIVER AUTENTICADO ---
-        st.title(f"Bem-vindo, {name}, ao MakrAI!")
+        st.success(f"Bem-vindo, {name}, ao MakrAI!")
 
         # Carregar índices disponíveis do Azure AI Search
         available_indexes = get_available_indexes(search_endpoint, search_key)
@@ -235,8 +237,5 @@ def main():
         """)
 
         # Botão de logout
-        authenticator.logout("Logout", "main")
-
-if __name__ == "__main__":
-    main()
+        authenticator.logout("Logout", "sidebar")
 
