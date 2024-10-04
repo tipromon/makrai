@@ -192,7 +192,7 @@ def main():
 
     # Autenticação na barra lateral
     with st.sidebar:
-        name, authentication_status, username = authenticator.login("main")  # Corrigido
+        name, authentication_status, username = authenticator.login("Login", "sidebar")
 
     # Verificar o status da autenticação
     if authentication_status == False:
