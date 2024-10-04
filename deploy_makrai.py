@@ -22,7 +22,7 @@ with open("config.yaml", "r") as file:
     config = yaml.load(file, Loader=SafeLoader)
 
 # Pre-hash as senhas (opcional, para melhorar performance)
-hashed_credentials = stauth.Hasher(config['credentials']['usernames']).generate()
+hashed_credentials = stauth.Hasher(config['credentials']['usernames']).hash_passwords()
 
 # Criar o objeto de autenticação usando as credenciais carregadas
 authenticator = stauth.Authenticate(
