@@ -185,9 +185,13 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 # Função principal do Streamlit
-# Função principal do Streamlit
+
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
+
+    # Inicializar o histórico de mensagens se ainda não foi feito
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
     # Autenticação na barra lateral
     try:
@@ -208,6 +212,10 @@ def main():
         # Carregar índices disponíveis do Azure AI Search
         available_indexes = get_available_indexes(search_endpoint, search_key)
 
+        if not available_indexes:
+            st.error("Nenhum índice disponível no Azure Search.")
+            return
+
         # Criar uma lista de nomes amigáveis a serem exibidos no dropdown
         friendly_indexes = [get_friendly_index_name(index) for index in available_indexes]
 
@@ -217,14 +225,11 @@ def main():
         # Encontrar o nome real do índice selecionado com base no nome amigável
         selected_index = next((key for key, value in index_name_mapping.items() if value == selected_friendly_index), selected_friendly_index)
 
-        # Inicializar o histórico de mensagens
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-
         # Exibir o histórico de mensagens
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+        if st.session_state.messages:
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
 
         # Caixa de entrada do chat
         if prompt := st.chat_input("Digite sua pergunta:"):
@@ -238,4 +243,3 @@ def main():
 
         # Botão de logout
         authenticator.logout("Logout", "sidebar")
-
