@@ -141,11 +141,9 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
         for result in results:
             doc_name = result.get('sourcefile', 'Documento sem nome')
             logger.debug(f"Documento encontrado: {doc_name}")
-            logger.debug(f"Campos do documento: {result.keys()}")
             documents_used.append({
                 'content': result.get('content', ''),
-                'sourcefile': doc_name,
-                'metadata': {k: v for k, v in result.items() if k not in ['content', 'sourcefile']}
+                'sourcefile': doc_name
             })
 
         # Processar a resposta do Azure OpenAI com integração ao Azure AI Search
@@ -159,24 +157,13 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
             full_response += "\n\nReferências:\n"
             for i, doc in enumerate(documents_used):
                 doc_name = os.path.basename(doc['sourcefile'])
-                
-                # Usar o container selecionado pelo usuário
-                selected_container = selected_index  # Assumindo que o nome do índice corresponde ao container
-                
-                doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_container}/{urllib.parse.quote(doc_name)}"
-                logger.debug(f"URL do documento gerada: {doc_url}")
-                logger.debug(f"Metadados do documento: {doc['metadata']}")
-
-                # Criar link clicável
+                doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_index}/{urllib.parse.quote(doc_name)}"
                 full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
 
         # Atualiza a resposta final no placeholder
         message_placeholder.markdown(full_response, unsafe_allow_html=True)
     
     st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-    # Log final para depuração
-    logger.debug(f"Resposta completa gerada com {len(documents_used)} documentos referenciados.")
 
 # Função principal do Streamlit
 def main():
@@ -215,4 +202,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
