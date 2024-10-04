@@ -4,7 +4,6 @@ import openai
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
-from azure.storage.blob import BlobServiceClient  # Para verificar os documentos no Blob Storage
 import urllib.parse  # Para codificar URLs corretamente
 import logging
 
@@ -20,7 +19,6 @@ search_endpoint = st.secrets["AZURE_SEARCH_SERVICE_ENDPOINT"]
 search_key = st.secrets["AZURE_SEARCH_SERVICE_ADMIN_KEY"]
 storage_account = st.secrets["AZURE_STORAGE_ACCOUNT"]
 storage_container = st.secrets["AZURE_STORAGE_CONTAINER"]
-storage_key = st.secrets["AZURE_STORAGE_KEY"]  # Adicione sua chave de acesso ao Blob Storage
 
 # Instruções detalhadas para o assistente da Promon Engenharia
 ROLE_INFORMATION = """
@@ -77,6 +75,10 @@ index_name_mapping = {
     "recursos-humanos": "Relações Humanas"
 }
 
+# Função para obter o nome amigável a partir do nome real do índice
+def get_friendly_index_name(real_index_name):
+    return index_name_mapping.get(real_index_name, real_index_name)
+
 # Função para criar o chat com dados do Azure AI Search
 def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     client = openai.AzureOpenAI(
@@ -112,21 +114,6 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
         }
     )
 
-# Função para verificar se um arquivo existe no Blob Storage
-def file_exists_in_blob(container_name, blob_name):
-    try:
-        blob_service_client = BlobServiceClient(account_url=f"https://{storage_account}.blob.core.windows.net", credential=storage_key)
-        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-        exists = blob_client.exists()
-        if exists:
-            logger.debug(f"Arquivo encontrado no Blob Storage: {blob_name}")
-        else:
-            logger.warning(f"Arquivo não encontrado no Blob Storage: {blob_name}")
-        return exists
-    except Exception as e:
-        logger.error(f"Erro ao acessar Blob Storage: {str(e)}")
-        return False
-
 # Função para lidar com a entrada do chat e gerar resposta
 def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -154,11 +141,10 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
         for result in results:
             doc_name = result.get('sourcefile', 'Documento sem nome')
             logger.debug(f"Documento encontrado: {doc_name}")
-            
-            # Adicionar apenas o nome do documento e garantir que ele está no formato correto
-            doc_short_name = os.path.basename(doc_name)  # Obter apenas o nome do arquivo, sem caminho local
-            documents_used.append(doc_short_name)
-            logger.debug(f"Nome curto do documento processado: {doc_short_name}")
+            documents_used.append({
+                'content': result.get('content', ''),
+                'sourcefile': doc_name
+            })
 
         # Processar a resposta do Azure OpenAI com integração ao Azure AI Search
         for response in create_chat_with_data_completion(aoai_deployment_name, st.session_state.messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
@@ -169,25 +155,15 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
         # Adicionar referências clicáveis ao final da resposta
         if documents_used:
             full_response += "\n\nReferências:\n"
-            for i, doc_name in enumerate(documents_used):
-                # Usar o nome do índice selecionado como nome do container no Blob Storage
-                selected_container = selected_index  # Assumindo que o nome do índice corresponde ao container
-                
-                # Verificar se o arquivo existe no Blob Storage
-                if file_exists_in_blob(selected_container, doc_name):
-                    # Criar URL para o documento
-                    doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_container}/{urllib.parse.quote(doc_name)}"
-                    full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
-                else:
-                    full_response += f"{i+1}. {doc_name} (não encontrado no Blob Storage)\n"
+            for i, doc in enumerate(documents_used):
+                doc_name = os.path.basename(doc['sourcefile'])
+                doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_index}/{urllib.parse.quote(doc_name)}"
+                full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
 
         # Atualiza a resposta final no placeholder
         message_placeholder.markdown(full_response, unsafe_allow_html=True)
     
     st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-    # Log final para depuração
-    logger.debug(f"Resposta completa gerada com {len(documents_used)} documentos referenciados.")
 
 # Função principal do Streamlit
 def main():
