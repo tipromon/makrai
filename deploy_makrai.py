@@ -178,12 +178,13 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     logger.debug(f"Resposta completa gerada com {len(documents_used)} documentos referenciados.")
 
 # Função principal do Streamlit
+# Função principal do Streamlit
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
 
     # Autenticação na barra lateral
     with st.sidebar:
-        name, authentication_status, username = authenticator.login("Login", "sidebar")
+        name, authentication_status, username = authenticator.login("sidebar")  # Corrigido para usar apenas "sidebar"
 
     # Verificar o status da autenticação
     if authentication_status == False:
@@ -232,3 +233,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
