@@ -1,12 +1,15 @@
-import yaml
-from yaml.loader import SafeLoader
+import os
 import streamlit as st
-import streamlit_authenticator as stauth
 import openai
-from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
-from pathlib import Path
+import urllib.parse  # Para codificar URLs corretamente
+import logging
+
+# Configuração do logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Carregar as variáveis diretamente do Streamlit Secrets
 aoai_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
@@ -16,22 +19,6 @@ search_endpoint = st.secrets["AZURE_SEARCH_SERVICE_ENDPOINT"]
 search_key = st.secrets["AZURE_SEARCH_SERVICE_ADMIN_KEY"]
 storage_account = st.secrets["AZURE_STORAGE_ACCOUNT"]
 storage_container = st.secrets["AZURE_STORAGE_CONTAINER"]
-
-# Carregar as credenciais do arquivo YAML
-with open("config.yaml", "r") as file:
-    config = yaml.load(file, Loader=SafeLoader)
-
-# Pre-hash as senhas (opcional, para melhorar performance)
-hashed_credentials = stauth.Hasher(config['credentials']['usernames']).hash_passwords()
-
-# Criar o objeto de autenticação usando as credenciais carregadas
-authenticator = stauth.Authenticate(
-    credentials=hashed_credentials,
-    cookie_name=config['cookie']['name'],
-    key=config['cookie']['key'],
-    expiry_days=config['cookie']['expiry_days'],
-    auto_hash=False  # Se já pré-hasheamos as senhas
-)
 
 # Instruções detalhadas para o assistente da Promon Engenharia
 ROLE_INFORMATION = """
@@ -74,7 +61,6 @@ Resposta: "De acordo com o cronograma presente no documento 'Cronograma_Projeto_
 Considerações Finais:
 Mantenha clareza, objetividade e relevância em todas as respostas. Garanta que o usuário receba as informações mais atualizadas e pertinentes, baseadas exclusivamente nos documentos disponíveis para consulta. Seu objetivo é facilitar o acesso a informações técnicas e administrativas, respeitando sempre os limites de acesso aos conteúdos indexados da Promon Engenharia.
 """
-
 
 # Função para carregar índices do Azure AI Search
 def get_available_indexes(search_endpoint, search_key):
@@ -141,14 +127,25 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
 
         # Realizar a busca no Azure AI Search
         search_client = SearchClient(search_endpoint, selected_index, credential=AzureKeyCredential(search_key))
-        results = search_client.search(prompt, top=5)
+        logger.debug(f"Realizando busca no índice: {selected_index}")
+        logger.debug(f"Prompt de busca: {prompt}")
+        
+        try:
+            results = search_client.search(prompt, top=5, include_total_count=True)
+            logger.debug(f"Total de resultados encontrados: {results.get_count()}")
+        except Exception as e:
+            logger.error(f"Erro ao realizar a busca: {str(e)}")
+            results = []
 
         # Processar os documentos retornados da busca
         for result in results:
             doc_name = result.get('sourcefile', 'Documento sem nome')
+            logger.debug(f"Documento encontrado: {doc_name}")
+            logger.debug(f"Campos do documento: {result.keys()}")
             documents_used.append({
                 'content': result.get('content', ''),
-                'sourcefile': doc_name
+                'sourcefile': doc_name,
+                'metadata': {k: v for k, v in result.items() if k not in ['content', 'sourcefile']}
             })
 
         # Processar a resposta do Azure OpenAI com integração ao Azure AI Search
@@ -161,8 +158,16 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
         if documents_used:
             full_response += "\n\nReferências:\n"
             for i, doc in enumerate(documents_used):
-                doc_name = doc['sourcefile']
-                doc_url = f"https://{storage_account}.blob.core.windows.net/{storage_container}/{doc_name}"
+                doc_name = os.path.basename(doc['sourcefile'])
+                
+                # Usar o container selecionado pelo usuário
+                selected_container = selected_index  # Assumindo que o nome do índice corresponde ao container
+                
+                doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_container}/{urllib.parse.quote(doc_name)}"
+                logger.debug(f"URL do documento gerada: {doc_url}")
+                logger.debug(f"Metadados do documento: {doc['metadata']}")
+
+                # Criar link clicável
                 full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
 
         # Atualiza a resposta final no placeholder
@@ -170,58 +175,44 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
+    # Log final para depuração
+    logger.debug(f"Resposta completa gerada com {len(documents_used)} documentos referenciados.")
+
 # Função principal do Streamlit
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
 
-    # Autenticação na barra lateral
-    with st.sidebar:
-        name, authentication_status, username = authenticator.login("sidebar")
+    # Carregar índices disponíveis do Azure AI Search
+    available_indexes = get_available_indexes(search_endpoint, search_key)
 
-    # Verificar o status da autenticação
-    if authentication_status == False:
-        st.error("Nome de usuário ou senha incorretos")
+    # Criar uma lista de nomes amigáveis a serem exibidos no dropdown
+    friendly_indexes = [get_friendly_index_name(index) for index in available_indexes]
 
-    if authentication_status == None:
-        st.warning("Por favor, insira o nome de usuário e a senha")
+    # Dropdown para selecionar o índice
+    selected_friendly_index = st.sidebar.selectbox("Selecione o índice do Azure AI Search", options=friendly_indexes)
 
-    if authentication_status:
-        # --- SE O USUÁRIO ESTIVER AUTENTICADO ---
-        st.title(f"Bem-vindo, {name}, ao MakrAI!")
+    # Encontrar o nome real do índice selecionado com base no nome amigável
+    selected_index = next((key for key, value in index_name_mapping.items() if value == selected_friendly_index), selected_friendly_index)
 
-        # Carregar índices disponíveis do Azure AI Search
-        available_indexes = get_available_indexes(search_endpoint, search_key)
+    # Inicializar o histórico de mensagens
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-        # Criar uma lista de nomes amigáveis a serem exibidos no dropdown
-        friendly_indexes = [get_friendly_index_name(index) for index in available_indexes]
+    # Exibir o histórico de mensagens
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-        # Dropdown para selecionar o índice
-        selected_friendly_index = st.sidebar.selectbox("Selecione o índice do Azure AI Search", options=friendly_indexes)
+    # Caixa de entrada do chat
+    if prompt := st.chat_input("Digite sua pergunta:"):
+        handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index)
 
-        # Encontrar o nome real do índice selecionado com base no nome amigável
-        selected_index = next((key for key, value in index_name_mapping.items() if value == selected_friendly_index), selected_friendly_index)
-
-        # Inicializar o histórico de mensagens
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-
-        # Exibir o histórico de mensagens
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-        # Caixa de entrada do chat
-        if prompt := st.chat_input("Digite sua pergunta:"):
-            handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index)
-
-        # Adicionar disclaimer no rodapé
-        st.sidebar.markdown("""
-        **Disclaimer**:
-        O "MakrAI" tem como único objetivo disponibilizar dados que sirvam como um meio de orientação e apoio; não constitui, porém, uma recomendação vinculante pois não representam uma análise personalizada para um Cliente e/ou Projeto específico, e, portanto, não devem ser utilizados como única fonte de informação na tomada de decisões pelos profissionais Promon.
-        """)
-
-        # Botão de logout
-        authenticator.logout("Logout", "sidebar")
+    # Adicionar disclaimer no rodapé
+    st.sidebar.markdown("""
+    **Disclaimer**:
+    O "MakrAI" tem como único objetivo disponibilizar dados que sirvam como um meio de orientação e apoio; não constitui, porém, uma recomendação vinculante pois não representam uma análise personalizada para um Cliente e/ou Projeto específico, e, portanto, não devem ser utilizados como única fonte de informação na tomada de decisões pelos profissionais Promon.
+    """)
 
 if __name__ == "__main__":
     main()
+
