@@ -63,10 +63,14 @@ Mantenha clareza, objetividade e relevância em todas as respostas. Garanta que 
 names = ["Peter Parker", "Rebecca Miller", "Michel Daros", "Gustavo Pelissaro", "Alex Sandoval", "Alexsandra Mendes", "Marco Lamim", "Guilherme Grandesi", "Henrique Riego", "Rogerio Ishikawa", "David Andrade", "Fabiana Garcia", "Gabriela Souza", "Andre Hiroshi", "Rafael Pereira", "Gisele Duarte", "Bruna Rufino", "Hellen Vitali", "Rosana Bretzel", "Maria Araújo"]
 usernames = ["pparker", "rmiller", "mdaros", "gpelissaro", "asandoval", "amendes", "mlamim", "ggrandesi", "hriego", "rishikawa", "dandrade", "fgarcia", "gsouza", "ahiroshi", "rpereira", "gduarte", "brufino", "hvitali", "rbretzel", "maraujo"]
 
-# Carregar as senhas hasheadas
+# Carregar as senhas hasheadas com emails
 file_path = Path(__file__).parent / "hashed_pw.pkl"
 with file_path.open("rb") as file:
-    hashed_passwords = pickle.load(file)
+    credentials = pickle.load(file)
+
+# Verificar se as credenciais têm o formato correto
+st.write(credentials)  # Isso pode ser removido depois de verificar as credenciais
+
 
 # Configurar as credenciais de autenticação
 credentials = {
@@ -101,6 +105,7 @@ authenticator = stauth.Authenticate(
     cookie_key="some_cookie_key",
     cookie_expiry_days=30
 )
+
 
 # Função para carregar índices do Azure AI Search
 def get_available_indexes(search_endpoint, search_key):
