@@ -15,20 +15,6 @@ search_key = st.secrets["AZURE_SEARCH_SERVICE_ADMIN_KEY"]
 storage_account = st.secrets["AZURE_STORAGE_ACCOUNT"]
 storage_container = st.secrets["AZURE_STORAGE_CONTAINER"]
 
-# Carregar as credenciais do arquivo hashed_pw.pkl
-file_path = Path(__file__).parent / "hashed_pw.pkl"
-with file_path.open("rb") as file:
-    credentials = pickle.load(file)
-
-# Criar o objeto de autenticação usando as credenciais carregadas
-authenticator = stauth.Authenticate(
-    credentials=credentials,
-    cookie_name="promon_ai_chatbot",
-    cookie_key="some_cookie_key",
-    cookie_expiry_days=30
-)
-
-
 # Instruções detalhadas para o assistente da Promon Engenharia
 ROLE_INFORMATION = """
 Instruções para o Assistente de IA da Promon Engenharia:
@@ -69,18 +55,21 @@ Resposta: "De acordo com o cronograma presente no documento 'Cronograma_Projeto_
 
 Considerações Finais:
 Mantenha clareza, objetividade e relevância em todas as respostas. Garanta que o usuário receba as informações mais atualizadas e pertinentes, baseadas exclusivamente nos documentos disponíveis para consulta. Seu objetivo é facilitar o acesso a informações técnicas e administrativas, respeitando sempre os limites de acesso aos conteúdos indexados da Promon Engenharia.
-
 """
 
 # --- USER AUTHENTICATION ---
-# Nomes e usernames para autenticação
-names = ["Peter Parker", "Rebecca Miller", "Michel Daros", "Gustavo Pelissaro", "Alex Sandoval", "Alexsandra Mendes", "Marco Lamim", "Guilherme Grandesi", "Henrique Riego", "Rogerio Ishikawa", "David Andrade", "Fabiana Garcia", "Gabriela Souza", "Andre Hiroshi", "Rafael Pereira", "Gisele Duarte", "Bruna Rufino", "Hellen Vitali", "Rosana Bretzel", "Maria Araújo"]
-usernames = ["pparker", "rmiller", "mdaros", "gpelissaro", "asandoval", "amendes", "mlamim", "ggrandesi", "hriego", "rishikawa", "dandrade", "fgarcia", "gsouza", "ahiroshi", "rpereira", "gduarte", "brufino", "hvitali", "rbretzel", "maraujo"]
+# Carregar as credenciais do arquivo hashed_pw.pkl
+file_path = Path(__file__).parent / "hashed_pw.pkl"
+with file_path.open("rb") as file:
+    credentials = pickle.load(file)
 
-
-# Verificar se as credenciais têm o formato correto
-st.write(credentials)  # Isso pode ser removido depois de verificar as credenciais
-
+# Criar o objeto de autenticação usando as credenciais carregadas
+authenticator = stauth.Authenticate(
+    credentials=credentials,
+    cookie_name="promon_ai_chatbot",
+    cookie_key="some_cookie_key",
+    cookie_expiry_days=30
+)
 
 # Função para carregar índices do Azure AI Search
 def get_available_indexes(search_endpoint, search_key):
@@ -99,7 +88,7 @@ index_name_mapping = {
 def get_friendly_index_name(real_index_name):
     return index_name_mapping.get(real_index_name, real_index_name)
 
-# Função para criar o chat com dados do Azure AI Search
+# Função para criar o chat com dados do Azure AI Search e ROLE_INFORMATION
 def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     client = openai.AzureOpenAI(
         api_key=aoai_key,
