@@ -253,18 +253,19 @@ def print_index_fields(index_name):
         logger.debug(f"- {field.name} ({field.type})")
 
 def gerar_link_documento(nome_documento, index_name):
+    nome_documento_encoded = urllib.parse.quote(nome_documento).replace(' ', '%')
     base_url = "https://aisearchpromon.blob.core.windows.net"
     
     if index_name == "vector-vopk":
-        return f"{base_url}/vopak-dp/{nome_documento}"
+        return f"{base_url}/vopak-dp/{nome_documento_encoded}"
     elif index_name == "vector-epotl":
-        return f"{base_url}/epotl-dp-vetores/PDFs/{nome_documento}"
+        return f"{base_url}/epotl-dp-vetores/PDFs/{nome_documento_encoded}"
     elif index_name == "vector-rh":
-        return f"{base_url}/recursos-humanos-dp-vetores/{nome_documento}"
+        return f"{base_url}/recursos-humanos-dp-vetores/{nome_documento_encoded}"
     elif index_name == "vector-bi":
-        return f"{base_url}/bi-im/{nome_documento}"
+        return f"{base_url}/bi-im/{nome_documento_encoded}"
     else:
-        return f"{base_url}/{index_name}-dp-vetores/{nome_documento}"
+        return f"{base_url}/{index_name}-dp-vetores/{nome_documento_encoded}"
 
 if __name__ == "__main__":
     main()
