@@ -92,7 +92,7 @@ def get_friendly_index_name(real_index_name):
 def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     client = openai.AzureOpenAI(
         api_key=aoai_key,
-        api_version="2024-06-01",
+        api_version="2024-02-15-preview",  # Atualizado para versão mais recente
         azure_endpoint=aoai_endpoint
     )
     try:
@@ -107,12 +107,15 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
                         "parameters": {
                             "endpoint": search_endpoint,
                             "index_name": selected_index,
-                            "semantic_configuration": "default",
-                            "query_type": "semantic",
-                            "fields_mapping": {},
+                            "query_type": "vector",  # Alterado de semantic para vector
+                            "fields_mapping": {
+                                "content_fields": ["content"],
+                                "title_field": "sourcefile",
+                                "url_field": "sourcefile",
+                                "vector_fields": ["contentVector"]
+                            },
                             "in_scope": True,
                             "role_information": ROLE_INFORMATION,
-                            "strictness": 3,
                             "top_n_documents": 5,
                             "authentication": {
                                 "type": "api_key",
@@ -123,7 +126,7 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
                 ]
             }
         )
-    except openai.error.OpenAIError as e:
+    except Exception as e:  # Alterado para capturar Exception genérica
         logger.error(f"Erro ao chamar a API do OpenAI: {str(e)}")
         st.error("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
         raise
