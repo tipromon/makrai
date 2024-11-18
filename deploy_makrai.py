@@ -255,13 +255,13 @@ def print_index_fields(index_name):
 def gerar_link_documento(nome_documento, index_name):
     base_url = "https://aisearchpromon.blob.core.windows.net"
     
-    if index_name == "vetores-vopk":
+    if index_name == "vector-vopk":
         return f"{base_url}/vopak-dp/{nome_documento}"
-    elif index_name == "vetores-epotl":
+    elif index_name == "vector-epotl":
         return f"{base_url}/epotl-dp-vetores/PDFs/{nome_documento}"
-    elif index_name == "vetores-rh":
+    elif index_name == "vector-rh":
         return f"{base_url}/recursos-humanos-dp-vetores/{nome_documento}"
-    elif index_name == "vetores-bi":
+    elif index_name == "vector-bi":
         return f"{base_url}/bi-im/{nome_documento}"
     else:
         return f"{base_url}/{index_name}-dp-vetores/{nome_documento}"
