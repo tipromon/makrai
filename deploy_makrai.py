@@ -87,33 +87,38 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
         api_version="2024-06-01",
         azure_endpoint=aoai_endpoint
     )
-    return client.chat.completions.create(
-        model=aoai_deployment_name,
-        messages=[{"role": m["role"], "content": m["content"]} for m in messages],
-        stream=True,
-        extra_body={
-            "data_sources": [
-                {
-                    "type": "azure_search",
-                    "parameters": {
-                        "endpoint": search_endpoint,
-                        "index_name": selected_index,  # Usar o índice selecionado pelo usuário
-                        "semantic_configuration": "default",
-                        "query_type": "semantic",
-                        "fields_mapping": {},
-                        "in_scope": True,
-                        "role_information": ROLE_INFORMATION,
-                        "strictness": 3,
-                        "top_n_documents": 5,
-                        "authentication": {
-                            "type": "api_key",
-                            "key": search_key
+    try:
+        return client.chat.completions.create(
+            model=aoai_deployment_name,
+            messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+            stream=True,
+            extra_body={
+                "data_sources": [
+                    {
+                        "type": "azure_search",
+                        "parameters": {
+                            "endpoint": search_endpoint,
+                            "index_name": selected_index,
+                            "semantic_configuration": "default",
+                            "query_type": "semantic",
+                            "fields_mapping": {},
+                            "in_scope": True,
+                            "role_information": ROLE_INFORMATION,
+                            "strictness": 3,
+                            "top_n_documents": 5,
+                            "authentication": {
+                                "type": "api_key",
+                                "key": search_key
+                            }
                         }
                     }
-                }
-            ]
-        }
-    )
+                ]
+            }
+        )
+    except openai.error.OpenAIError as e:
+        logger.error(f"Erro ao chamar a API do OpenAI: {str(e)}")
+        st.error("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
+        raise
 
 # Função para lidar com a entrada do chat e gerar resposta
 def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
