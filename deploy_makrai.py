@@ -265,7 +265,7 @@ def gerar_link_documento(nome_documento, index_name):
     elif index_name == "vector-bi":
         return f"{base_url}/bi-im/{nome_documento_encoded}"
     else:
-        return f"{base_url}/{index_name}-dp-vetores/{nome_documento_encoded}"
+        return f"{base_url}/{index_name}/{nome_documento_encoded}"
 
 if __name__ == "__main__":
     main()
