@@ -92,7 +92,7 @@ def get_friendly_index_name(real_index_name):
 def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     client = openai.AzureOpenAI(
         api_key=aoai_key,
-        api_version="2024-02-15-preview",  # Atualizado para versão mais recente
+        api_version="2024-02-15-preview",
         azure_endpoint=aoai_endpoint
     )
     try:
@@ -107,12 +107,15 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
                         "parameters": {
                             "endpoint": search_endpoint,
                             "index_name": selected_index,
-                            "query_type": "vector",  # Alterado de semantic para vector
+                            "query_type": "vector",
+                            "embeddingEndpoint": aoai_endpoint,  # Adicionando o endpoint de embedding
+                            "embeddingKey": aoai_key,  # Adicionando a chave de embedding
+                            "embeddingDeploymentName": "text-embedding-ada-002",  # Nome do modelo de embedding
                             "fields_mapping": {
-                                "content_fields": ["content"],
-                                "title_field": "sourcefile",
-                                "url_field": "sourcefile",
-                                "vector_fields": ["contentVector"]
+                                "content_fields": ["chunk"],  # Atualizado para usar o campo correto
+                                "title_field": "title",
+                                "url_field": "parent_id",
+                                "vector_fields": ["text_vector"]  # Atualizado para usar o campo correto
                             },
                             "in_scope": True,
                             "role_information": ROLE_INFORMATION,
@@ -126,7 +129,7 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
                 ]
             }
         )
-    except Exception as e:  # Alterado para capturar Exception genérica
+    except Exception as e:
         logger.error(f"Erro ao chamar a API do OpenAI: {str(e)}")
         st.error("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
         raise
