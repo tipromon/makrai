@@ -257,7 +257,7 @@ def gerar_link_documento(nome_documento, index_name):
     base_url = "https://aisearchpromon.blob.core.windows.net"
     
     if index_name == "vector-vpak":
-        return f"{base_url}/vopak-dp-vetores/{nome_documento_encoded}"
+        return f"{base_url}/vopak-dp-vetores/PDFs/{nome_documento_encoded}"
     elif index_name == "vector-epotl":
         return f"{base_url}/epotl-dp-vetores/PDFs/{nome_documento_encoded}"
     elif index_name == "vector-rh":
