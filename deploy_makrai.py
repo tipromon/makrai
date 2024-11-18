@@ -107,19 +107,21 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
                         "parameters": {
                             "endpoint": search_endpoint,
                             "index_name": selected_index,
-                            "query_type": "vector",
-                            "embeddingEndpoint": aoai_endpoint,  # Adicionando o endpoint de embedding
-                            "embeddingKey": aoai_key,  # Adicionando a chave de embedding
-                            "embeddingDeploymentName": "text-embedding-ada-002",  # Nome do modelo de embedding
+                            "query_type": "simple",  # Alterado para busca simples
                             "fields_mapping": {
-                                "content_fields": ["chunk"],  # Atualizado para usar o campo correto
+                                "content_fields": ["chunk"],
                                 "title_field": "title",
-                                "url_field": "parent_id",
-                                "vector_fields": ["text_vector"]  # Atualizado para usar o campo correto
+                                "url_field": "parent_id"
                             },
                             "in_scope": True,
                             "role_information": ROLE_INFORMATION,
                             "top_n_documents": 5,
+                            "filter": None,
+                            "query_type_options": {
+                                "speller": "lexicon",
+                                "enable_fuzziness": True,
+                                "fuzzy_min_similarity": 0.6
+                            },
                             "authentication": {
                                 "type": "api_key",
                                 "key": search_key
@@ -133,7 +135,7 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
         logger.error(f"Erro ao chamar a API do OpenAI: {str(e)}")
         st.error("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
         raise
-
+        
 # Função para lidar com a entrada do chat e gerar resposta
 def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
     st.session_state.messages.append({"role": "user", "content": prompt})
