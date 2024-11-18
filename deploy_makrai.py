@@ -261,7 +261,7 @@ def gerar_link_documento(nome_documento, index_name):
     elif index_name == "vector-epotl":
         return f"{base_url}/epotl-dp-vetores/PDFs/{nome_documento_encoded}"
     elif index_name == "vector-rh":
-        return f"{base_url}/recursos-humanos-dp-vetores/{nome_documento_encoded}"
+        return f"{base_url}/recursos-humanos/{nome_documento_encoded}"
     elif index_name == "vector-bi":
         return f"{base_url}/bi-im/{nome_documento_encoded}"
     else:
