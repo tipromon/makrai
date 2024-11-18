@@ -20,6 +20,14 @@ search_key = st.secrets["AZURE_SEARCH_SERVICE_ADMIN_KEY"]
 storage_account = st.secrets["AZURE_STORAGE_ACCOUNT"]
 storage_container = st.secrets["AZURE_STORAGE_CONTAINER"]
 
+# Mapeamento de índicesw
+index_mapping = {
+    "E.VPAK001 - VOPAK": "vector-vpak",
+    "E.POTL001 - Projeto GLP/C5+": "vector-epotl",
+    "Relações Humanas": "vector-rh",
+    "Inteligência de Mercado": "vector-bi"
+}
+
 # Instruções detalhadas para o assistente da Promon Engenharia
 ROLE_INFORMATION = """
 Instruções para o Assistente de IA da Promon Engenharia:
