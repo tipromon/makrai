@@ -181,6 +181,8 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 # Função principal do Streamlit
+# ... código existente ...
+
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
     logger.info("Iniciando o MakrAI - Assistente Virtual Promon")
@@ -205,8 +207,17 @@ def main():
 
     # Campo de entrada para o usuário
     if prompt := st.chat_input("Digite sua pergunta aqui"):
-        handle_chat_prompt(prompt, selected_index)
+        handle_chat_prompt(
+            prompt,
+            aoai_deployment_name,
+            aoai_endpoint,
+            aoai_key,
+            search_endpoint,
+            search_key,
+            selected_index
+        )
 
+    # ... resto do código ...
     # Adicionar disclaimer no rodapé
     st.sidebar.markdown("""
     **Disclaimer**:
