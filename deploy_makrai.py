@@ -133,7 +133,7 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
         )
     except Exception as e:
         logger.error(f"Erro ao chamar a API do OpenAI: {str(e)}")
-        st.error("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
+        st.error("Ocorreu um erro ao processar sua solicita��ão. Por favor, tente novamente mais tarde.")
         raise
         
 # Função para lidar com a entrada do chat e gerar resposta
@@ -153,7 +153,13 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
         logger.debug(f"Prompt de busca: {prompt}")
         
         try:
-            results = search_client.search(prompt, top=5, include_total_count=True)
+            # Atualizar os campos na busca para corresponder ao índice
+            results = search_client.search(
+                search_text=prompt,
+                select=["chunk_id", "parent_id", "chunk", "title"],
+                top=5,
+                include_total_count=True
+            )
             logger.debug(f"Total de resultados encontrados: {results.get_count()}")
         except Exception as e:
             logger.error(f"Erro ao realizar a busca: {str(e)}")
@@ -161,10 +167,15 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
 
         # Processar os documentos retornados da busca
         for result in results:
-            doc_name = result.get('sourcefile', 'Documento sem nome')
-            logger.debug(f"Documento encontrado: {doc_name}")
+            # Usar os campos corretos do índice
+            doc_name = result.get('title', '') or result.get('parent_id', 'Documento sem nome')
+            content = result.get('chunk', '')
+            
+            logger.debug(f"Documento encontrado - título: {doc_name}")
+            logger.debug(f"Conteúdo: {content[:100]}...")  # Log dos primeiros 100 caracteres
+            
             documents_used.append({
-                'content': result.get('content', ''),
+                'content': content,
                 'sourcefile': doc_name
             })
 
