@@ -78,10 +78,10 @@ def get_available_indexes(search_endpoint, search_key):
 
 # Mapeamento entre os nomes reais dos índices e os nomes amigáveis
 index_name_mapping = {
-    "epotl-dp": "E.POTL001 - Projeto GLP/C5+",
-    "vopak-dp": "E.VPAK001 - VOPAK",
-    "recursos-humanos": "Relações Humanas",
-    "bi-im": "Inteligência de Mercado"
+    "vector-dp": "E.POTL001 - Projeto GLP/C5+",
+    "vector-vpak": "E.VPAK001 - VOPAK",
+    "vector-rh": "Relações Humanas",
+    "vector-bi": "Inteligência de Mercado"
 }
 
 # Função para obter o nome amigável a partir do nome real do índice
@@ -203,7 +203,7 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
 # ... código existente ...
 
 def main():
-    st.title("MakrAI - Assistente Virtual Promon")
+    st.title("Assistente Virtual Promon")
     logger.info("Iniciando o MakrAI - Assistente Virtual Promon")
 
     friendly_index_name = st.sidebar.selectbox(
