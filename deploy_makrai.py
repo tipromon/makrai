@@ -185,7 +185,7 @@ def main():
     st.title("MakrAI - Assistente Virtual Promon")
     logger.info("Iniciando o MakrAI - Assistente Virtual Promon")
 
-    friendly_index_name = st.selectbox(
+    friendly_index_name = st.sidebar.selectbox(
         "Selecione o projeto:",
         options=list(index_mapping.keys())
     )
