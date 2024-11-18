@@ -253,6 +253,10 @@ def print_index_fields(index_name):
         logger.debug(f"- {field.name} ({field.type})")
 
 def gerar_link_documento(nome_documento, index_name):
+    # Remove o "-7" do nome do documento se existir
+    nome_documento = nome_documento.replace('-7.pdf', '.pdf')
+    
+    # Codifica o nome do documento para URL
     nome_documento_encoded = urllib.parse.quote(nome_documento).replace(' ', '%')
     base_url = "https://aisearchpromon.blob.core.windows.net"
     
@@ -266,6 +270,6 @@ def gerar_link_documento(nome_documento, index_name):
         return f"{base_url}/bi-im/{nome_documento_encoded}"
     else:
         return f"{base_url}/{index_name}/{nome_documento_encoded}"
-
+        
 if __name__ == "__main__":
     main()
