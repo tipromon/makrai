@@ -6,6 +6,8 @@ from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 import urllib.parse  # Para codificar URLs corretamente
 import logging
+from azure.search.documents.models import VectorizedQuery, QueryType, QueryCaptionType, QueryAnswerType, VectorizableTextQuery
+from azure.search.documents.indexes.models import SearchIndex, SimpleField, SearchFieldDataType, SearchableField, VectorSearch, VectorSearchAlgorithmKind
 
 # Configuração do logging
 logging.basicConfig(level=logging.DEBUG)
@@ -145,48 +147,44 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
-        documents_used = []
 
-        # Realizar a busca no Azure AI Search
-        search_client = SearchClient(search_endpoint, selected_index, credential=AzureKeyCredential(search_key))
-        logger.debug(f"Realizando busca no índice: {selected_index}")
-        logger.debug(f"Prompt de busca: {prompt}")
-        
         try:
-            results = search_client.search(prompt, top=5, include_total_count=True)
-            logger.debug(f"Total de resultados encontrados: {results.get_count()}")
+            search_client = SearchClient(search_endpoint, selected_index, credential=AzureKeyCredential(search_key))
+            prompt_vector = get_embedding(prompt)
+            
+            results, semantic_answers = hybrid_search(search_client, prompt, prompt_vector, selected_index)
+            logger.debug(f"Número de resultados encontrados: {len(results)}")
+            
+            sources = []
+            references = []
+            for doc in results:
+                sources.append(f"[{doc['filename']}]({doc['link']}): {doc['content'][:500]}...")
+                references.append(f"[{doc['filename']}]({doc['link']})")
+                logger.debug(f"Documento encontrado: {doc['filename']}")
+            
+            if semantic_answers:
+                for answer in semantic_answers:
+                    sources.append(f"Resposta semântica: {answer.highlights or answer.text}")
+            
+            sources_text = "\n\n".join(sources)
+            references_text = "\n".join(references)
+
+            # Processar a resposta do Azure OpenAI
+            for response in create_chat_with_data_completion(aoai_deployment_name, st.session_state.messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
+                if response.choices:
+                    full_response += (response.choices[0].delta.content or "")
+                    message_placeholder.markdown(full_response + "▌")
+
+            # Adicionar referências ao final
+            if references:
+                full_response += f"\n\nReferências:\n{references_text}"
+
         except Exception as e:
-            logger.error(f"Erro ao realizar a busca: {str(e)}")
-            results = []
+            logger.error(f"Erro durante o processamento do chat: {str(e)}", exc_info=True)
+            full_response = f"Desculpe, ocorreu um erro ao processar sua solicitação: {str(e)}. Por favor, tente novamente mais tarde."
 
-        # Processar os documentos retornados da busca
-        for result in results:
-            doc_name = result.get('sourcefile', 'Documento sem nome')
-            logger.debug(f"Documento encontrado: {doc_name}")
-            documents_used.append({
-                'content': result.get('content', ''),
-                'sourcefile': doc_name
-            })
-
-        # Processar a resposta do Azure OpenAI com integração ao Azure AI Search
-        for response in create_chat_with_data_completion(aoai_deployment_name, st.session_state.messages, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index):
-            if response.choices:
-                full_response += (response.choices[0].delta.content or "")
-                message_placeholder.markdown(full_response + "▌")
-
-        # Adicionar referências clicáveis ao final da resposta
-        if documents_used:
-            full_response += "\n\nReferências:\n"
-            for i, doc in enumerate(documents_used):
-                doc_name = os.path.basename(doc['sourcefile'])
-                # Atualizar a URL de acordo com a nova lógica de geração de links
-                doc_url = gerar_link_documento(doc_name, selected_index)
-                full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
-
-        # Atualiza a resposta final no placeholder
         message_placeholder.markdown(full_response, unsafe_allow_html=True)
-    
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 # Função principal do Streamlit
 # ... código existente ...
