@@ -183,37 +183,58 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
 # Função principal do Streamlit
 def main():
     st.title("MakrAI - Assistente Virtual Promon")
+    logger.info("Iniciando o MakrAI - Assistente Virtual Promon")
 
-    # Carregar índices disponíveis do Azure AI Search
-    available_indexes = get_available_indexes(search_endpoint, search_key)
+    friendly_index_name = st.selectbox(
+        "Selecione o projeto:",
+        options=list(index_mapping.keys())
+    )
+    selected_index = index_mapping[friendly_index_name]
+    logger.info(f"Índice selecionado: {selected_index}")
 
-    # Criar uma lista de nomes amigáveis a serem exibidos no dropdown
-    friendly_indexes = [get_friendly_index_name(index) for index in available_indexes]
+    print_index_fields(selected_index)
 
-    # Dropdown para selecionar o índice
-    selected_friendly_index = st.sidebar.selectbox("Selecione o índice do Azure AI Search", options=friendly_indexes)
-
-    # Encontrar o nome real do índice selecionado com base no nome amigável
-    selected_index = next((key for key, value in index_name_mapping.items() if value == selected_friendly_index), selected_friendly_index)
-
-    # Inicializar o histórico de mensagens
+    # Inicializar o histórico de chat se não existir
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Exibir o histórico de mensagens
+    # Exibir mensagens anteriores
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Caixa de entrada do chat
-    if prompt := st.chat_input("Digite sua pergunta:"):
-        handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, search_endpoint, search_key, selected_index)
+    # Campo de entrada para o usuário
+    if prompt := st.chat_input("Digite sua pergunta aqui"):
+        handle_chat_prompt(prompt, selected_index)
 
     # Adicionar disclaimer no rodapé
     st.sidebar.markdown("""
     **Disclaimer**:
     O "MakrAI" tem como único objetivo disponibilizar dados que sirvam como um meio de orientação e apoio; não constitui, porém, uma recomendação vinculante pois não representam uma análise personalizada para um Cliente e/ou Projeto específico, e, portanto, não devem ser utilizados como única fonte de informação na tomada de decisões pelos profissionais Promon.
     """)
+
+    logger.info("Sessão do MakrAI finalizada")
+
+def print_index_fields(index_name):
+    index_client = SearchIndexClient(endpoint=search_endpoint, credential=AzureKeyCredential(search_key))
+    index = index_client.get_index(index_name)
+    logger.debug(f"Campos do índice {index_name}:")
+    for field in index.fields:
+        logger.debug(f"- {field.name} ({field.type})")
+
+def gerar_link_documento(nome_documento, index_name):
+    base_url = "https://aisearchpromon.blob.core.windows.net"
+    
+    if index_name == "vetores-vopk":
+        return f"{base_url}/vopak-dp-vetores/PDFs/{nome_documento}"
+    elif index_name == "vetores-epotl":
+        return f"{base_url}/epotl-dp-vetores/PDFs/{nome_documento}"
+    elif index_name == "vetores-rh":
+        return f"{base_url}/recursos-humanos-dp-vetores/{nome_documento}"
+    elif index_name == "vetores-bi":
+        return f"{base_url}/bi-im/{nome_documento}"
+    else:
+        return f"{base_url}/{index_name}-dp-vetores/{nome_documento}"
 
 if __name__ == "__main__":
     main()
