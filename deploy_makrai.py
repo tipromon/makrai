@@ -72,7 +72,8 @@ def get_available_indexes(search_endpoint, search_key):
 index_name_mapping = {
     "epotl-dp": "E.POTL001 - Projeto GLP/C5+",
     "vopak-dp": "E.VPAK001 - VOPAK",
-    "recursos-humanos": "Relações Humanas"
+    "recursos-humanos": "Relações Humanas",
+    "bi-im": "Inteligência de Mercado"
 }
 
 # Função para obter o nome amigável a partir do nome real do índice
@@ -152,14 +153,14 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
                 full_response += (response.choices[0].delta.content or "")
                 message_placeholder.markdown(full_response + "▌")
 
-        ## Adicionar referências clicáveis ao final da resposta
-        ## if documents_used:
-        ##     full_response += "\n\nReferências:\n"
-        ##     for i, doc in enumerate(documents_used):
-        ##         doc_name = os.path.basename(doc['sourcefile'])
-        ##         doc_url = f"https://{storage_account}.blob.core.windows.net/{selected_index}/{urllib.parse.quote(doc_name)}"
-        ##         full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
-
+        # Adicionar referências clicáveis ao final da resposta
+        if documents_used:
+            full_response += "\n\nReferências:\n"
+            for i, doc in enumerate(documents_used):
+                doc_name = os.path.basename(doc['sourcefile'])
+                # Atualizar a URL de acordo com a nova lógica de geração de links
+                doc_url = gerar_link_documento(doc_name, selected_index)
+                full_response += f"{i+1}. [{doc_name}]({doc_url})\n"
 
         # Atualiza a resposta final no placeholder
         message_placeholder.markdown(full_response, unsafe_allow_html=True)
