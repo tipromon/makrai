@@ -238,10 +238,7 @@ def main():
 
     # ... resto do código ...
     # Adicionar disclaimer no rodapé
-    st.sidebar.markdown("""
-    **Disclaimer**:
-    O "MakrAI" tem como único objetivo disponibilizar dados que sirvam como um meio de orientação e apoio; não constitui, porém, uma recomendação vinculante pois não representam uma análise personalizada para um Cliente e/ou Projeto específico, e, portanto, não devem ser utilizados como única fonte de informação na tomada de decisões pelos profissionais Promon.
-    """)
+    st.sidebar.markdown("""""")
 
     logger.info("Sessão do MakrAI finalizada")
 
