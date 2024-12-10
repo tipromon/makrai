@@ -209,11 +209,11 @@ def main():
         st.image(
             "https://raw.githubusercontent.com/tipromon/makrai/main/LOGO-COLORIDO-%E2%80%93-FUNDO-BRANCO.png",
             use_column_width=True,
-            width=150
+            width=100
         )
     
     # Centralizar o título
-    st.markdown("<h1 style='text-align: center;'>Assistente Virtual Promon</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Assistente Virtual Promon</h3>", unsafe_allow_html=True)
     logger.info("Iniciando o MakrAI - Assistente Virtual Promon")
 
     friendly_index_name = st.sidebar.selectbox(
