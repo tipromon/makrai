@@ -209,7 +209,7 @@ def main():
         st.image(
             "https://raw.githubusercontent.com/tipromon/makrai/main/LOGO-COLORIDO-%E2%80%93-FUNDO-BRANCO.png",
             use_column_width=True,
-            width=300
+            width=150
         )
     
     # Centralizar o título
