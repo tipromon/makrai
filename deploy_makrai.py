@@ -133,7 +133,7 @@ def create_chat_with_data_completion(aoai_deployment_name, messages, aoai_endpoi
         )
     except Exception as e:
         logger.error(f"Erro ao chamar a API do OpenAI: {str(e)}")
-        st.error("Ocorreu um erro ao processar sua solicita��ão. Por favor, tente novamente mais tarde.")
+        st.error("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
         raise
         
 # Função para lidar com a entrada do chat e gerar resposta
@@ -203,7 +203,17 @@ def handle_chat_prompt(prompt, aoai_deployment_name, aoai_endpoint, aoai_key, se
 # ... código existente ...
 
 def main():
-    st.title("Assistente Virtual Promon")
+    # Adicionar o logo centralizado com tamanho reduzido
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.image(
+            "https://raw.githubusercontent.com/tipromon/makrai/main/LOGO-COLORIDO-%E2%80%93-FUNDO-BRANCO.png",
+            use_column_width=True,
+            width=300
+        )
+    
+    # Centralizar o título
+    st.markdown("<h1 style='text-align: center;'>Assistente Virtual Promon</h1>", unsafe_allow_html=True)
     logger.info("Iniciando o MakrAI - Assistente Virtual Promon")
 
     friendly_index_name = st.sidebar.selectbox(
