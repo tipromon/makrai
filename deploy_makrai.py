@@ -208,7 +208,7 @@ def main():
     with col2:
         st.image(
             "https://raw.githubusercontent.com/tipromon/makrai/main/LOGO-COLORIDO-%E2%80%93-FUNDO-BRANCO.png",
-            use_column_width=True,
+            use_container_width=True,
             width=100
         )
     
